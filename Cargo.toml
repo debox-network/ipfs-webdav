@@ -1,0 +1,27 @@
+[package]
+name = "ipfs-webdav"
+version = "0.1.0"
+authors = ["Debox Development Team <dev@debox.cloud>"]
+description = "A daemon that exposes a WebDAV filesystem that is synced with IPFS via the IPFS RPC API"
+homepage = "https://debox.cloud/ipfs-webdav"
+readme = "README.md"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/debox-cloud/ipfs-webdav"
+
+[dependencies]
+webdav-handler = "0.2.0"
+ipfs-api-backend-hyper = "0.5.0"
+tokio = { version = "1.21.1", features = ["full"] }
+http = "0.2.8"
+bytes = "1.2.1"
+futures = "0.3.24"
+log = "0.4.17"
+env_logger = "0.9.1"
+async-trait = "0.1.57"
+
+[dev-dependencies]
+hyper = { version = "0.14.20", features = ["full"] }
+
+[[example]]
+name = "base"
