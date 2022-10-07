@@ -5,9 +5,11 @@ authors = ["Debox Development Team <dev@debox.cloud>"]
 description = "A daemon that exposes a WebDAV filesystem that is synced with IPFS via the IPFS RPC API"
 homepage = "https://debox.cloud/ipfs-webdav"
 readme = "README.md"
-edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/debox-cloud/ipfs-webdav"
+keywords = ["ipfs", "webdav"]
+categories = ["filesystem", "web-programming"]
+edition = "2021"
 
 [dependencies]
 webdav-handler = "0.2.0"
