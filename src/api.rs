@@ -1,53 +1,56 @@
-// Copyright 2022 Debox Developers
+// Copyright 2022-2023 Debox Network
 //
 // Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
 // http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
 // http://opensource.org/licenses/MIT>, at your option. This file may not be
 // copied, modified, or distributed except according to those terms.
 //
+
 use std::fmt::{Debug, Formatter};
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use async_trait::async_trait;
 use bytes::{Buf, Bytes};
-use futures::executor::block_on;
 use futures::TryStreamExt;
-use ipfs_api_backend_hyper::{Error, IpfsApi, IpfsClient, TryFromUri};
 use ipfs_api_backend_hyper::request::{FilesLs, FilesRead, FilesWrite};
 use ipfs_api_backend_hyper::response::{FilesEntry, FilesStatResponse};
-use tokio::task::spawn_blocking;
+use ipfs_api_backend_hyper::{Error, IpfsApi, IpfsClient, TryFromUri};
 
 /// Trait that defines the interface for interaction with IPFS RPC API.
 #[async_trait]
 pub trait PeerApi: Send + Sync + Debug {
     /// Add references to IPFS files and directories in MFS (or copy within MFS).
-    async fn cp(&self, path: &String, dest: &String) -> Result<(), Error>;
+    async fn cp(&self, path: &str, dest: &str) -> Result<(), Error>;
 
     /// Flush a given path's data to disk.
-    async fn flush(&self, path: &String) -> Result<(), Error>;
+    async fn flush(&self, path: &str) -> Result<(), Error>;
 
     /// List directories in the local mutable namespace.
-    async fn ls(&self, path: &String) -> Result<Vec<PeerEntry>, Error>;
+    async fn ls(&self, path: &str) -> Result<Vec<PeerEntry>, Error>;
 
     /// Make directories.
-    async fn mkdir(&self, path: &String) -> Result<PeerEntry, Error>;
+    async fn mkdir(&self, path: &str) -> Result<PeerEntry, Error>;
 
     /// Move files.
-    async fn mv(&self, path: &String, dest: &String) -> Result<(), Error>;
+    async fn mv(&self, path: &str, dest: &str) -> Result<(), Error>;
 
     /// Read a file in a given MFS.
-    async fn read(&self, path: &String, offset: usize, count: usize) -> Result<Bytes, Error>;
+    async fn read(&self, path: &str, offset: usize, count: usize) -> Result<Bytes, Error>;
 
     /// Remove a file.
-    async fn rm(&self, path: &String) -> Result<(), Error>;
+    async fn rm(&self, path: &str) -> Result<(), Error>;
 
     /// Display file status.
-    async fn stat(&self, path: &String) -> Result<PeerEntry, Error>;
+    async fn stat(&self, path: &str) -> Result<PeerEntry, Error>;
 
     /// Write to a mutable file in a given filesystem.
     async fn write(
-        &self, path: &String, offset: usize, truncate: bool, data: Bytes,
+        &self,
+        path: &str,
+        offset: usize,
+        truncate: bool,
+        data: Bytes,
     ) -> Result<(), Error>;
 }
 
@@ -71,9 +74,9 @@ pub struct PeerEntry {
 }
 
 impl PeerEntry {
-    fn new_dir(path: &String) -> Self {
+    fn new_dir(path: &str) -> Self {
         Self {
-            path: path.clone(),
+            path: path.to_string(),
             crtime: SystemTime::now(),
             mtime: SystemTime::now(),
             is_dir: true,
@@ -81,9 +84,9 @@ impl PeerEntry {
         }
     }
 
-    fn from_stat(path: &String, stat: &FilesStatResponse) -> Self {
+    fn from_stat(path: &str, stat: &FilesStatResponse) -> Self {
         Self {
-            path: path.clone(),
+            path: path.to_string(),
             crtime: SystemTime::now(),
             mtime: SystemTime::now(),
             is_dir: stat.typ == "directory",
@@ -91,9 +94,9 @@ impl PeerEntry {
         }
     }
 
-    fn from_entry(path: &String, entry: &FilesEntry) -> Self {
+    fn from_entry(path: &str, entry: &FilesEntry) -> Self {
         Self {
-            path: path.clone(),
+            path: path.to_string(),
             crtime: SystemTime::now(),
             mtime: SystemTime::now(),
             is_dir: entry.typ == 1,
@@ -119,7 +122,7 @@ impl BaseApi {
     }
 
     /// Creates a new instance of `BaseApi` from a provided IPFS API Server URI
-    pub fn from_str(uri: &str) -> Box<BaseApi> {
+    pub fn from_uri(uri: &str) -> Box<BaseApi> {
         BaseApi::from_ipfs_client(IpfsClient::from_str(uri).unwrap())
     }
 
@@ -137,143 +140,93 @@ impl Debug for BaseApi {
 
 #[async_trait]
 impl PeerApi for BaseApi {
-    async fn cp(&self, path: &String, dest: &String) -> Result<(), Error> {
+    async fn cp(&self, path: &str, dest: &str) -> Result<(), Error> {
         let path = normalize_path(path);
         let dest = normalize_path(dest);
-        let ipfs = self.ipfs.clone();
-        spawn_blocking(move || {
-            block_on(async {
-                ipfs.files_cp(&path, &dest).await
-            })
-        })
-            .await.unwrap()
+        self.ipfs.files_cp(&path, &dest).await
     }
 
-    async fn flush(&self, path: &String) -> Result<(), Error> {
+    async fn flush(&self, path: &str) -> Result<(), Error> {
         let path = normalize_path(path);
-        let ipfs = self.ipfs.clone();
-        spawn_blocking(move || {
-            block_on(async {
-                ipfs.files_flush(Some(&path)).await
-            })
-        })
-            .await.unwrap()
+        self.ipfs.files_flush(Some(&path)).await
     }
 
-    async fn ls(&self, path: &String) -> Result<Vec<PeerEntry>, Error> {
+    async fn ls(&self, path: &str) -> Result<Vec<PeerEntry>, Error> {
         let path = normalize_path(path);
-        let ipfs = self.ipfs.clone();
-        spawn_blocking(move || {
-            block_on(async {
-                let req = FilesLs {
-                    path: Some(&path),
-                    long: Some(true),
-                    ..Default::default()
-                };
-                let res = ipfs.files_ls_with_options(req).await?;
-                Ok(res.entries
-                    .iter()
-                    .map(|e| {
-                        let p = concat_path(&path, &e.name);
-                        PeerEntry::from_entry(&p, e)
-                    })
-                    .collect())
-            })
-        })
-            .await.unwrap()
+        let req = FilesLs {
+            path: Some(&path),
+            long: Some(true),
+            ..Default::default()
+        };
+        let res = self.ipfs.files_ls_with_options(req).await?;
+        Ok(res
+            .entries
+            .iter()
+            .map(|e| PeerEntry::from_entry(&concat_path(&path, &e.name), e))
+            .collect())
     }
 
-    async fn mkdir(&self, path: &String) -> Result<PeerEntry, Error> {
+    async fn mkdir(&self, path: &str) -> Result<PeerEntry, Error> {
         let path = normalize_path(path);
-        let ipfs = self.ipfs.clone();
-        spawn_blocking(move || {
-            block_on(async {
-                ipfs.files_mkdir(&path, false).await?;
-                Ok(PeerEntry::new_dir(&path))
-            })
-        })
-            .await.unwrap()
+        self.ipfs.files_mkdir(&path, false).await?;
+        Ok(PeerEntry::new_dir(&path))
     }
 
-    async fn mv(&self, path: &String, dest: &String) -> Result<(), Error> {
+    async fn mv(&self, path: &str, dest: &str) -> Result<(), Error> {
         let path = normalize_path(path);
         let dest = normalize_path(dest);
-        let ipfs = self.ipfs.clone();
-        spawn_blocking(move || {
-            block_on(async {
-                ipfs.files_mv(&path, &dest).await
-            })
-        })
-            .await.unwrap()
+        self.ipfs.files_mv(&path, &dest).await
     }
 
-    async fn read(&self, path: &String, offset: usize, count: usize) -> Result<Bytes, Error> {
+    async fn read(&self, path: &str, offset: usize, count: usize) -> Result<Bytes, Error> {
         let path = normalize_path(path);
-        let ipfs = self.ipfs.clone();
-        spawn_blocking(move || {
-            block_on(async {
-                let req = FilesRead {
-                    path: &path,
-                    offset: Some(offset as i64),
-                    count: Some(count as i64),
-                };
-                let data = ipfs.files_read_with_options(req)
-                    .map_ok(|chunk| chunk.to_vec())
-                    .try_concat()
-                    .await?;
-                Ok(Bytes::copy_from_slice(&data))
-            })
-        })
-            .await.unwrap()
+        let req = FilesRead {
+            path: &path,
+            offset: Some(offset as i64),
+            count: Some(count as i64),
+        };
+        let data = self
+            .ipfs
+            .files_read_with_options(req)
+            .map_ok(|chunk| chunk.to_vec())
+            .try_concat()
+            .await?;
+        Ok(Bytes::copy_from_slice(&data))
     }
 
-    async fn rm(&self, path: &String) -> Result<(), Error> {
+    async fn rm(&self, path: &str) -> Result<(), Error> {
         let path = normalize_path(path);
-        let ipfs = self.ipfs.clone();
-        spawn_blocking(move || {
-            block_on(async {
-                ipfs.files_rm(&path, true).await
-            })
-        })
-            .await.unwrap()
+        self.ipfs.files_rm(&path, true).await
     }
 
-    async fn stat(&self, path: &String) -> Result<PeerEntry, Error> {
+    async fn stat(&self, path: &str) -> Result<PeerEntry, Error> {
         let path = normalize_path(path);
-        let ipfs = self.ipfs.clone();
-        spawn_blocking(move || {
-            block_on(async {
-                let stat = ipfs.files_stat(&path).await?;
-                Ok(PeerEntry::from_stat(&path, &stat))
-            })
-        })
-            .await.unwrap()
+        let stat = self.ipfs.files_stat(&path).await?;
+        Ok(PeerEntry::from_stat(&path, &stat))
     }
 
     async fn write(
-        &self, path: &String, offset: usize, truncate: bool, data: Bytes,
+        &self,
+        path: &str,
+        offset: usize,
+        truncate: bool,
+        data: Bytes,
     ) -> Result<(), Error> {
         let path = normalize_path(path);
-        let ipfs = self.ipfs.clone();
-        spawn_blocking(move || {
-            block_on(async {
-                let req = FilesWrite {
-                    path: &path,
-                    offset: Some(offset as i64),
-                    create: Some(true),
-                    truncate: Some(truncate),
-                    flush: Some(false),
-                    ..Default::default()
-                };
-                ipfs.files_write_with_options(req, data.reader()).await
-            })
-        })
-            .await.unwrap()
+        let req = FilesWrite {
+            path: &path,
+            offset: Some(offset as i64),
+            create: Some(true),
+            truncate: Some(truncate),
+            flush: Some(false),
+            ..Default::default()
+        };
+        self.ipfs.files_write_with_options(req, data.reader()).await
     }
 }
 
 #[inline]
-fn concat_path(p1: &String, p2: &String) -> String {
+fn concat_path(p1: &str, p2: &str) -> String {
     pb_to_string(Path::new(p1).join(Path::new(p2)))
 }
 
@@ -283,9 +236,9 @@ fn pb_to_string(path: PathBuf) -> String {
 }
 
 #[inline]
-fn normalize_path(path: &String) -> String {
-    let mut path = path.clone();
-    if path.len() > 1 && path.ends_with("/") {
+fn normalize_path(path: &str) -> String {
+    let mut path = path.to_string();
+    if path.len() > 1 && path.ends_with('/') {
         path.pop();
     }
     path
