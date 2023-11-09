@@ -1,14 +1,8 @@
 # ipfs-webdav
 
-**ipfs-webdav** is a daemon that exposes a [WebDAV](http://webdav.org/) filesystem that is synced
-with [IPFS](https://ipfs.io) via the IPFS RPC API. It enables users to interface with
-IPFS's [MFS](https://docs.ipfs.tech/concepts/file-systems/#mutable-file-system-mfs) directly through a file explorer or
-terminal.
+**ipfs-webdav** is a [WebDAV](http://webdav.org/) server that enables direct access to [IPFS](https://ipfs.io)'s [MFS](https://docs.ipfs.tech/concepts/file-systems/#mutable-file-system-mfs) as a mounted drive. It enables users to interface with the MFS directly through a file explorer or terminal.
 
-Even though IPFS currently offers the ability to mount an IPFS file system, it is
-still [experimental](https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-mount) and limited to read-only access.
-**ipfs-webdav** offers a convenient way for read/write access to the files stored on your local IPFS node without having
-to interact with IPFS, either through the web-ui or cli.
+Even though IPFS currently offers the ability to mount an IPFS file system, it is still [experimental](https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-mount) and limited to read-only access. **ipfs-webdav** offers a convenient way for read/write access to the files stored on your local IPFS node without having to interact with IPFS, either through the web-ui or cli.
 
 ![ipfs-webdav architecture](diagram.png)
 
@@ -21,7 +15,7 @@ Before installing **ipfs-webdav** make sure that the following dependencies are 
 
 Once all the dependencies are installed, refer to the follow steps to install `ipfs-webdav`:
 
-1. Clone the git repo: `git clone https://github.com/debox-cloud/ipfs-webdav`
+1. Clone the git repo: `git clone https://github.com/debox-network/ipfs-webdav`
 2. Navigate to repo root: `cd ipfs-webdav`
 3. Assemble the project `cargo build --package ipfs-webdav --example base --release`
 
@@ -34,8 +28,7 @@ Once **ipfs-webdav** is installed on your system, run the project:
 
 ## Mounting
 
-Once both the IPFS daemon and **ipfs-webdav** daemon are running, the WebDAV filesystem can be mounted for immediate
-use. The mounting instructions differ slightly based on your OS. Refer to the appropriate set of instructions below.
+Once both the IPFS daemon and **ipfs-webdav** daemon are running, the WebDAV filesystem can be mounted for immediate use. The mounting instructions differ slightly based on your OS. Refer to the appropriate set of instructions below.
 
 #### Linux - via files explorer
 
@@ -62,8 +55,7 @@ TBD
 
 **ipfs-webdav** implements the base [RFC4918](https://www.rfc-editor.org/rfc/rfc4918) WebDAV specification.
 
-The official standard for testing any WebDAV implementation is [litmus](http://www.webdav.org/neon/litmus/). All tests
-will be run using it.
+The official standard for testing any WebDAV implementation is [litmus](http://www.webdav.org/neon/litmus/). All tests will be run using it.
 
 #### Installing Litmus
 
@@ -105,14 +97,11 @@ Once Litmus is installed, run it to test **ipfs-webdav**: `litmus dav://127.0.0.
 
 ### webdav-handler
 
-Much of the WebDAV functionality is based on [webdav-handler](https://crates.io/crates/webdav-handler). Big thanks
-to [Miquel](https://github.com/miquels) for his ongoing work in creating/maintaining an elegant rust implementation of
-the WebDAV protocol.
+Much of the WebDAV functionality is based on [webdav-handler](https://crates.io/crates/webdav-handler). Big thanks to [Miquel](https://github.com/miquels) for his ongoing work in creating/maintaining an elegant rust implementation of the WebDAV protocol.
 
 ### ipfs-api
 
-[ipfs-api](https://crates.io/crates/ipfs-api) is a great rust implementation of the IPFS RPC API, which tremendously
-helped in interfacing with IPFS.
+[ipfs-api](https://crates.io/crates/ipfs-api) is a great rust implementation of the IPFS RPC API, which tremendously helped in interfacing with IPFS.
 
 ## License
 
@@ -127,5 +116,4 @@ at your option.
 
 ## Contribution
 
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as
-defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
